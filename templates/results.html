@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Search Results</title>
+    <link
+      rel="stylesheet"
+      href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css"
+    />
+  </head>
+  <body>
+    <div class="container">
+      <h1 class="mt-5">Search Results for "{{ query }}"</h1>
+      {% if error %}
+      <div class="alert alert-danger" role="alert">{{ error }}</div>
+      {% else %} {{ table | safe }}
+      <h2 class="mt-5">Visualizations</h2>
+      <div class="mt-3">
+        <h3>Total Views and Likes</h3>
+        <img
+          src="data:image/png;base64,{{ total_plot }}"
+          alt="Total Views and Likes"
+        />
+      </div>
+      <div class="mt-3">
+        <h3>Views and Likes Percentage</h3>
+        <img
+          src="data:image/png;base64,{{ percent_plot }}"
+          alt="Views and Likes Percentage"
+        />
+      </div>
+      <div class="mt-3">
+        <h3>Engagement Rate</h3>
+        <img
+          src="data:image/png;base64,{{ engagement_rate_plot }}"
+          alt="Engagement Rate"
+        />
+      </div>
+      <div class="mt-3">
+        <h3>Composite Score</h3>
+        <img
+          src="data:image/png;base64,{{ composite_score_plot }}"
+          alt="Composite Score"
+        />
+      </div>
+      {% endif %}
+    </div>
+  </body>
+</html>
