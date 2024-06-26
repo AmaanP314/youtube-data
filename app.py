@@ -1,4 +1,3 @@
-
 from flask import Flask, request, render_template, redirect, url_for
 from youtube_search import search_youtube
 

@@ -1,6 +1,4 @@
-# youtube_search.py
 from googleapiclient.discovery import build
-import json
 import isodate
 import matplotlib
 import pandas as pd
@@ -88,77 +86,8 @@ def get_data(search, sort_by='relevance', max_results=5):
             videos_data.append(video_data)
     return videos_data
 
-
-# def viz_combined(df, plot_type='total'):
-    fig, ax = plt.subplots(figsize=(10, 7))
-    colors = ['#03045e','#023e8a','#0077b6','#0096c7','#00b4d8','#48cae4','#90e0ef','#ade8f4']
-    sns.set_style('white')
-
-    if plot_type == 'total' or plot_type == 'percent':
-        ax.bar(df.index + 1, df['views'], color=colors)
-
-        if plot_type == 'total':
-            ax2 = ax.twinx()
-            ax2.plot(df.index + 1, df['likes'], color='crimson', marker='D')
-            ax2.set_ylabel('Likes', fontsize=13, fontweight='bold')
-            ax2.yaxis.set_major_formatter(FuncFormatter(lambda x, _: f'{int(x):,}'))
-        elif plot_type == 'percent':
-            ax2 = ax.twinx()
-            ax2.set_ylim(0, 1)
-            ax2.yaxis.set_major_formatter(PercentFormatter(xmax=1.0))
-            ax2.plot(df.index + 1, df['likes(%)'] / 100, color='crimson', marker='D')
-            ax2.set_ylabel('Likes (%)', fontsize=13, fontweight='bold')
-        else:
-            raise ValueError("Invalid plot_type. Use 'total' or 'percent'.")
-
-        ax.set_ylabel('Views', fontsize=13, fontweight='bold')
-        plt.title('Views and Likes Graph' if plot_type == 'total' else 'Views and Likes Percentage by Views', fontsize=16, fontweight='bold')
-
-    elif plot_type == 'engagement_rate':
-        df['engagement_rate'] = (df['likes'] + df['comments']) / df['views']
-        ax.bar(df.index + 1, df['engagement_rate'], color=colors)
-        ax.yaxis.set_major_formatter(PercentFormatter(xmax=1.0))
-        ax.set_ylim(0, df['engagement_rate'].max() * 1.1)
-        ax.set_ylabel('Engagement Rate (%)', fontsize=13, fontweight='bold')
-        plt.title('Engagement Rate by Video', fontsize=16, fontweight='bold')
-
-    elif plot_type == 'composite_score':
-        df['engagement_rate'] = (df['likes'] + df['comments']) / df['views']
-        df['composite_score'] = (df['views'] * 0.4) + (df['likes'] * 0.2) + (df['comments'] * 0.2) + (df['engagement_rate'] * 0.1) + (df['subscribers'] * 0.1)
-        ax.bar(df.index + 1, df['composite_score'], color=colors)
-        ax.set_ylabel('Composite Score', fontsize=13, fontweight='bold')
-        plt.title('Composite Score by Video', fontsize=16, fontweight='bold')
-
-    else:
-        raise ValueError("Invalid plot_type. Use 'total', 'percent', 'engagement_rate', or 'composite_score'.")
-
-    while len(colors) < len(df):
-        colors.extend(colors)
-
-    handles = [plt.Line2D([0], [0], color=c, marker='o', label=f"{num}: {name}", markersize=10, linestyle='None') 
-               for num, name, c in zip(df.index + 1, df['title'], colors)]
-
-    legend = ax.legend(handles=handles, title='Title Mapping', loc='upper center', bbox_to_anchor=(0.5, -0.15), ncol=2)
-    plt.setp(legend.get_title(), fontsize=13, fontweight='bold')
-
-    ax.set_xlabel('Title Number', fontsize=13, fontweight='bold')
-    ax.set_xticks(range(1, len(df) + 1))
-    ax.set_xticklabels(range(1, len(df) + 1))
-    if plot_type == 'total' or plot_type == 'percent' or plot_type == 'composite_score':
-        ax.yaxis.set_major_formatter(FuncFormatter(lambda x, _: f'{int(x):,}'))
-    else:
-        ax.yaxis.set_major_formatter(FuncFormatter(lambda x, _: f'{x:.2%}'))
-
-    plt.rcParams['font.family'] = 'DejaVu Sans'
-
-    # Adjust bottom margin based on the number of videos
-    bottom_margin = 0.25 + 0.02 * (len(df) // 5)
-    fig.subplots_adjust(bottom=bottom_margin)
-    
-    plt.show()
-
 def viz_combined(df, plot_type='total'):
-    fig, ax = plt.subplots(figsize=(12, 8))  # Increased the figure size for better legend display
+    fig, ax = plt.subplots(figsize=(12, 8))
     colors = ['#03045e','#023e8a','#0077b6','#0096c7','#00b4d8','#48cae4','#90e0ef','#ade8f4']
     sns.set_style('white')
 
@@ -219,11 +148,9 @@ def viz_combined(df, plot_type='total'):
 
     plt.rcParams['font.family'] = 'DejaVu Sans'
 
-    # Adjust bottom margin based on the number of videos
-    bottom_margin = 0.25 + 0.07 * (len(df) // 5)  # Increased increment value
+    bottom_margin = 0.25 + 0.07 * (len(df) // 5)  
     fig.subplots_adjust(bottom=bottom_margin)
     
-    # Adjust width of the legend
     for text in legend.get_texts():
         text.set_fontsize(10)
     legend.get_frame().set_linewidth(0.5)
