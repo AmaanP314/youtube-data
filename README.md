@@ -12,7 +12,7 @@ This project scrapes YouTube data based on user queries and provides visualizati
 - [Usage](#usage)
 - [Project Structure](#project-structure)
 - [Contributing](#contributing)
-- [Contact](#Contact)
+- [Contact](#contact)
 
 ## Features
 - Scrapes YouTube video data using Selenium
@@ -95,8 +95,11 @@ This project scrapes YouTube data based on user queries and provides visualizati
     ├── app.py # Main Flask application
     ├── youtube_search.py # Script to scrape YouTube data
     ├── requirements.txt # Python dependencies
-    ├── static/ # Static files (CSS, images, etc.)
+    ├── static/
+    │       ├── styles.css # CSS styles
     ├── templates/ # HTML templates
+    │       ├── results.html # Results page template
+    │       └── search.html # Search page template
     └── README.md # Project documentation
 
 
