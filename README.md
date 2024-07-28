@@ -27,10 +27,11 @@ This project scrapes YouTube data based on user queries and provides visualizati
     - Create a database named `youtube_data`.
     - Create the necessary tables:
         ```sql
-        CREATE TABLE `search` (
-            `id` int NOT NULL AUTO_INCREMENT,
-            `query` varchar(255) NOT NULL,
-            `last_searched` datetime NOT NULL,
+        CREATE TABLE search (
+            id int NOT NULL AUTO_INCREMENT,
+            query varchar(255) NOT NULL,
+            first_searched datetime NOT NULL,
+            last_searched datetime NOT NULL,
             PRIMARY KEY (`id`)
         );
 
@@ -47,7 +48,7 @@ This project scrapes YouTube data based on user queries and provides visualizati
             comments INT,
             video_link VARCHAR(255),
             sId INT, foreign key(sId) references search(id)
-            );
+        );
 
         ```
 
@@ -58,6 +59,10 @@ This project scrapes YouTube data based on user queries and provides visualizati
     app.config['MYSQL_PASSWORD'] = 'your_mysql_password'
     app.config['MYSQL_DB'] = 'youtube_data'
     app.config['MYSQL_CURSORCLASS'] = 'DictCursor'
+    ```
+- Add your YouTube API key in `youtube_search.py`:
+    ```python
+    api_key = 'your_youtube_api_key'
     ```
 
 ## Running the Application
