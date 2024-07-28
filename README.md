@@ -2,6 +2,18 @@
 
 This project scrapes YouTube data based on user queries and provides visualizations for the results. It stores data in a MySQL database and checks for existing data to provide faster results on subsequent searches.
 
+## Table of Contents
+
+- [Features](#features)
+- [Prerequisites](#prerequisites)
+- [Installation](#installation)
+- [Configuration](#configuration)
+- [Running the Application](#running-the-application)
+- [Usage](#usage)
+- [Project Structure](#project-structure)
+- [Contributing](#contributing)
+- [Contact](#Contact)
+
 ## Features
 - Scrapes YouTube video data using Selenium
 - Stores video data in a MySQL database
@@ -76,7 +88,24 @@ This project scrapes YouTube data based on user queries and provides visualizati
 1. Enter a query, sort criteria, and maximum results in the search form.
 2. View search results, visualizations, and stored data.
 
+## Project Structure
+
+    youtube-data/
+    │
+    ├── app.py # Main Flask application
+    ├── youtube_search.py # Script to scrape YouTube data
+    ├── requirements.txt # Python dependencies
+    ├── static/ # Static files (CSS, images, etc.)
+    ├── templates/ # HTML templates
+    └── README.md # Project documentation
+
 
 ## Contributing
 Contributions are welcome! Please fork the repository and submit pull requests.
-.
+
+## Contact
+
+Amaan Poonawala - [GitHub](https://github.com/amaanp314)
+
+Feel free to reach out for any questions or feedback.
+
