@@ -34,23 +34,21 @@ This project scrapes YouTube data based on user queries and provides visualizati
             PRIMARY KEY (`id`)
         );
 
-        CREATE TABLE `results` (
-            `id` int NOT NULL AUTO_INCREMENT,
-            `title` varchar(255) NOT NULL,
-            `channel_name` varchar(255) NOT NULL,
-            `subscribers` int NOT NULL,
-            `views` int NOT NULL,
-            `likes` int NOT NULL,
-            `likes_percent` float NOT NULL,
-            `duration_minutes` float NOT NULL,
-            `upload_date` date NOT NULL,
-            `comments` int NOT NULL,
-            `video_link` varchar(255) NOT NULL,
-            `sId` int NOT NULL,
-            PRIMARY KEY (`id`),
-            KEY `sId` (`sId`),
-            CONSTRAINT `results_ibfk_1` FOREIGN KEY (`sId`) REFERENCES `search` (`id`)
-        );
+        CREATE TABLE results (
+            rId INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+            title VARCHAR(255),
+            channel_name VARCHAR(255),
+            subscribers BIGINT,
+            views BIGINT,
+            likes INT,
+            likes_percent DECIMAL(8, 6),
+            duration_minutes INT,
+            upload_date DATE,
+            comments INT,
+            video_link VARCHAR(255),
+            sId INT, foreign key(sId) references search(id)
+            );
+
         ```
 
 ## Configuration
