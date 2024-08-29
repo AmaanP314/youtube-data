@@ -1,4 +1,4 @@
-# YouTube Data Scraper and Visualizer
+# YouTube Data Analysis
 
 This project scrapes YouTube data based on user queries and provides visualizations for the results. It stores data in a MySQL database and checks for existing data to provide faster results on subsequent searches.
 
@@ -9,13 +9,14 @@ This project scrapes YouTube data based on user queries and provides visualizati
 - [Installation](#installation)
 - [Configuration](#configuration)
 - [Running the Application](#running-the-application)
+- [Webpage](#webpage)
 - [Usage](#usage)
 - [Project Structure](#project-structure)
 - [Contributing](#contributing)
 - [Contact](#contact)
 
 ## Features
-- Scrapes YouTube video data using Selenium
+- Collects the video data using youtube data api v3
 - Stores video data in a MySQL database
 - Retrieves data from the database for faster results if query exists
 - Provides visualizations for views, likes, and engagement rates
@@ -84,6 +85,14 @@ This project scrapes YouTube data based on user queries and provides visualizati
     ```
 2. Access the application at `http://localhost:5000`.
 
+## Webpage
+
+Check out the live project: [YouTube Data Analysis](https://youtube-data-analysis-n32d.onrender.com)
+
+### Note
+- The website is hosted on Render, so the initial load time may take 30 seconds to 1 minute.
+- The live demo does not include the implementation of the MySQL database. Due to cost considerations, database integration is not enabled on the free hosting tier.
+
 ## Usage
 1. Enter a query, sort criteria, and maximum results in the search form.
 2. View search results, visualizations, and stored data.
@@ -96,7 +105,7 @@ This project scrapes YouTube data based on user queries and provides visualizati
     ├── youtube_search.py # Script to scrape YouTube data
     ├── requirements.txt # Python dependencies
     ├── static/
-    │       ├── styles.css # CSS styles
+    │       └── styles.css # CSS styles
     ├── templates/ # HTML templates
     │       ├── results.html # Results page template
     │       └── search.html # Search page template
@@ -108,7 +117,7 @@ Contributions are welcome! Please fork the repository and submit pull requests.
 
 ## Contact
 
-Amaan Poonawala - [GitHub](https://github.com/amaanp314)
+Amaan Poonawala - [GitHub](https://github.com/amaanp314) | [LinkedIn](https://www.linkedin.com/in/amaan-poonawala)
 
 Feel free to reach out for any questions or feedback.
 
