@@ -88,6 +88,7 @@ This project scrapes YouTube data based on user queries and provides visualizati
 ## Webpage
 
 Check out the live project: [YouTube Data Analysis](https://youtube-data-analysis-n32d.onrender.com)
+the web app is currently under maintanance!
 
 ### Note
 - The website is hosted on Render, so the initial load time may take 30 seconds to 1 minute.
