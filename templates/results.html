@@ -10,58 +10,69 @@
     />
     <link
       rel="stylesheet"
-      href="{{ url_for('static', filename='styles.css') }}"
+      href="{{ url_for('static', filename='css/styles.css') }}"
     />
   </head>
   <body>
     <div class="container">
-      <h1 class="mt-5">Search Results for "{{ query }}"</h1>
+      <h1 class="mt-5 text-center">Search Results for "{{ query }}"</h1>
       {% if error %}
       <div class="alert alert-danger" role="alert">{{ error }}</div>
-      {% else %} {{ table | safe }}
-      <h2 class="mt-5">Visualizations</h2>
-      <div class="mt-3">
+      {% else %}
+      <div class="table-responsive">{{ table | safe }}</div>
+
+      <h2 class="mt-5 text-center">Visualizations</h2>
+
+      <div class="mt-3 text-center" id="total-plot">
         <h3>Total Views and Likes</h3>
         <img
-          src="data:image/png;base64,{{ total_plot }}"
-          alt="Total Views and Likes"
+          id="total-placeholder"
+          src="{{ url_for('static', filename='images/placeholder.png') }}"
+          alt="Loading..."
         />
       </div>
-      <div class="mt-3">
-        <h3>Views and Likes(%)</h3>
-        <img
-          src="data:image/png;base64,{{ percent_plot }}"
-          alt="Views and Likes Percentage"
-        />
-      </div>
-      <div class="mt-3">
-        <h3>Engagement Rate:</h3>
+      <div class="mt-3 text-center" id="sentiment-plot">
+        <h3>Sentiment analysis</h3>
         <p>
-          The engagement rate is a metric that measures the level of interaction
-          that viewers have with a video. It takes into account various forms of
-          engagement, such as likes, dislikes, comments, shares, and the overall
-          watch time
+          Sentiment analysis is a natural language processing technique used to analyze and interpret 
+          the emotions, opinions, or attitudes expressed in text data. It helps determine whether the 
+          sentiment is positive, negative, or neutral, enabling insights into customer feedback, 
+          social media trends, and more.
+        </p>        
+        <img
+          id="sentiment-placeholder"
+          src="{{ url_for('static', filename='images/senti-placeholder.png') }}"
+          alt="Loading..."
+        />
+      </div>
+      <div class="mt-3 text-center" id="engagement-rate-plot">
+        <h3>Engagement Rate</h3>
+        <p>
+          The engagement rate measures the level of interaction viewers have
+          with a video. It includes likes, dislikes, comments, shares, and watch
+          time.
         </p>
         <img
-          src="data:image/png;base64,{{ engagement_rate_plot }}"
-          alt="Engagement Rate"
+          id="engagement-rate-placeholder"
+          src="{{ url_for('static', filename='images/placeholder.png') }}"
+          alt="Loading..."
         />
       </div>
-      <div class="mt-3">
+      <div class="mt-3 text-center" id="composite-score-plot">
         <h3>Composite Score</h3>
         <p>
-          The Composite Score is a combined metric that aggregates multiple
-          performance indicators into a single, comprehensive score. This score
-          aims to provide a more holistic evaluation of a video's success or
-          quality, considering various aspects of viewer engagement and
-          interaction.
+          The Composite Score aggregates multiple performance indicators into a
+          single score to evaluate video success or quality.
         </p>
         <img
-          src="data:image/png;base64,{{ composite_score_plot }}"
-          alt="Composite Score"
+          id="composite-score-placeholder"
+          src="{{ url_for('static', filename='images/placeholder.png') }}"
+          alt="Loading..."
         />
       </div>
       {% endif %}
     </div>
+   <script src="{{ url_for('static', filename='js/visualizations.js') }}"></script>
   </body>
 </html>
+

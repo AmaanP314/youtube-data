@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>YouTube Search</title>
+    <title>YouTube Video Recommender</title>
     <link
       rel="stylesheet"
       href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css"
@@ -15,7 +15,7 @@
   </head>
   <body>
     <div class="container">
-      <h1 class="mt-5">YouTube Search</h1>
+      <h1 class="mt-5 text-center">YouTube Video Recommender</h1>
       <form action="{{ url_for('search') }}" method="post">
         <div class="form-group">
           <label for="query">Search Query</label>
@@ -25,6 +25,7 @@
             id="query"
             name="query"
             required
+            placeholder="Search"
           />
         </div>
         <div class="form-group">
@@ -43,11 +44,32 @@
             class="form-control"
             id="max_results"
             name="max_results"
-            min="1"
-            max="50"
+            min="5"
+            max="40"
             value="10"
             required
           />
+        </div>
+        <h2 class="mt-4">Sentiment Analysis Options</h2>
+        <div class="form-group">
+          <label for="num_comments">Number of Comments</label>
+          <input
+            type="number"
+            class="form-control"
+            id="num_comments"
+            name="num_comments"
+            min="5"
+            max="1000"
+            value="5"
+            required
+          />
+        </div>
+        <div class="form-group">
+          <label for="comment_order">Comment Order</label>
+          <select class="form-control" id="comment_order" name="comment_order">
+            <option value="relevance">Relevance</option>
+            <option value="time">Time</option>
+          </select>
         </div>
         <button type="submit" class="btn btn-primary">Search</button>
       </form>

@@ -1,94 +1,112 @@
-from flask import Flask, request, render_template, redirect, url_for
-from youtube_search import search_youtube, viz_combined, plot_to_base64, strip_emojis
-from flask_mysqldb import MySQL
+from quart import Quart, request, render_template, redirect, url_for, jsonify, session
+from youtube_search import search_youtube, viz_combined, analyze_comments, sentiment_viz
 import pandas as pd
+import pickle
 
-app = Flask(__name__)
-
-app.config['MYSQL_HOST'] = 'localhost'
-app.config['MYSQL_USER'] = 'root'
-app.config['MYSQL_PASSWORD'] = 'YOUR PASSWORD'
-app.config['MYSQL_DB'] = 'youtube_data'
-app.config['MYSQL_DATABASE_CHARSET'] = 'utf8mb4'
-
-mysql = MySQL(app)
+app = Quart(__name__)
+app.secret_key = 'YOUR_SECRET_KEY'
 
 @app.route('/')
-def index():
-    return render_template('index.html')
+async def index():
+    return await render_template('index.html')
 
 @app.route('/search', methods=['POST'])
-def search():
-    query = request.form['query']
-    sort_by = request.form['sort_by']
-    max_results = int(request.form['max_results'])
-    cur = mysql.connection.cursor()
-    cur.execute("SELECT query FROM search WHERE query = %s", (query,))
-    search_exists = cur.fetchone()
-    if search_exists:
-        cur.execute("UPDATE search SET last_searched = NOW() WHERE query = %s", (query,))
-        mysql.connection.commit()
-    cur.close()
-    if search_exists:
-        return redirect(url_for('results', query=query, sort_by=sort_by, max_results=max_results, use_db=True))
-    else:
-        return redirect(url_for('results', query=query, sort_by=sort_by, max_results=max_results, use_db=False))
+async def search():
+    try:
+        form_data = await request.form
+        query = form_data.get('query', '').strip()
+        sort_by = form_data.get('sort_by', 'relevance')
+        max_results = int(form_data.get('max_results', 10))
+        max_comments = int(form_data.get('max_comments', 5))  
+        order_by = form_data.get('order_by', 'relevance')
+        if not query:
+            return await render_template('index.html', error="Search query cannot be empty.")
+        return redirect(url_for('results', query=query, sort_by=sort_by, max_results=max_results, max_comments=max_comments, order_by=order_by))
+    
+    except Exception as e:
+        return await render_template('index.html', error=f"Error: {e}")
 
 @app.route('/results')
-def results():
-    query = request.args.get('query')
-    sort_by = request.args.get('sort_by')
-    max_results = int(request.args.get('max_results'))
-    use_db = request.args.get('use_db')
-    
-    if use_db == 'True':
-        cur = mysql.connection.cursor()
-        cur.execute('''SELECT results.* FROM search
-                       JOIN results ON search.id = results.sId
-                       WHERE search.query = %s''', (query,))
-        videos_data = cur.fetchall()
-        cur.close()
-        
-        if not videos_data:
-            return render_template('results.html', query=query, error="No data found in database.")
-        
-        df = pd.DataFrame(videos_data, columns=['rId', 'title', 'channel_name', 'subscribers', 'views', 'likes', 'likes(%)', 'duration_minutes', 'upload_date', 'comments', 'video_link', 'sId'])
-        df.drop(columns=['rId', 'sId'], inplace=True)
-        
-        total_plot = plot_to_base64(viz_combined, df, plot_type='total')
-        percent_plot = plot_to_base64(viz_combined, df, plot_type='percent')
-        engagement_rate_plot = plot_to_base64(viz_combined, df, plot_type='engagement_rate')
-        composite_score_plot = plot_to_base64(viz_combined, df, plot_type='composite_score')
-        df.index = df.index + 1
-        df_html = df.to_html(classes='table table-striped', index=True, escape=False)
-    
-    else:
-        data = search_youtube(query, sort_by=sort_by, max_results=max_results)
-        if data is None:
-            return render_template('results.html', query=query, error="No data found.")
-        
-        df, total_plot, percent_plot, engagement_rate_plot, composite_score_plot = data
-        df.index = df.index + 1
-        df_html = df.to_html(classes='table table-striped', index=True, escape=False)
-        
-        cur = mysql.connection.cursor()
-        cur.execute('''INSERT INTO search(query, first_searched, last_searched)
-                       VALUES (%s, NOW(), NOW())''', (query,))
-        search_id = cur.lastrowid
-        
-        for index, row in df.iterrows():
-            title = strip_emojis(row['title'])
-            channel_name = strip_emojis(row['channel_name'])
-            try:
-                cur.execute('''INSERT INTO results(title, channel_name, subscribers, views, likes, likes_percent, duration_minutes, upload_date, comments, video_link, sId)
-                               VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)''',
-                               (title, channel_name, row['subscribers'], row['views'], row['likes'], row['likes(%)'], row['duration_minutes'], row['upload_date'], row['comments'], row['video_link'], search_id))
-            except Exception as e:
-                print(f"Error inserting row: {row}\nError: {e}")
-        mysql.connection.commit()
-        cur.close()
-    
-    return render_template('results.html', query=query, table=df_html, total_plot=total_plot, percent_plot=percent_plot, engagement_rate_plot=engagement_rate_plot, composite_score_plot=composite_score_plot)
+async def results():
+    try:
+        query = request.args.get('query', '').strip()
+        sort_by = request.args.get('sort_by', 'relevance')
+        max_results = int(request.args.get('max_results', 10))
+        max_comments = int(request.args.get('max_comments', 10))  
+        order_by = request.args.get('order_by', 'relevance')
 
+        if not query:
+            return await render_template('index.html', error="Search query cannot be empty.")
+
+        data = await search_youtube(query, sort_by=sort_by, max_results=max_results)
+        df = data
+        session['df'] = pickle.dumps((df, max_comments, order_by))
+
+        if df is None or df.empty:
+            return await render_template('results.html', query=query, error="No data found for the query.")
+
+        df = df.drop(columns=['Video_link'])
+
+        df.index = df.index + 1
+        df_html = df.to_html(classes='table table-striped', index=True, escape=False)
+
+        return await render_template(
+            'results.html',
+            query=query,
+            table=df_html,
+            total_plot=None,
+            engagement_rate_plot=None,
+            composite_score_plot=None,
+            sentiment_plot=None
+        )
+
+    except ValueError:
+        return await render_template('results.html', error="Invalid input values for query or max results.")
+    except Exception as e:
+        return await render_template('results.html', error=f"Unexpected error: {str(e)}")
+
+
+@app.route('/fetch_visualizations')
+async def fetch_visualizations():
+    try:
+        df, _, _ = pickle.loads(session['df'])
+        if df is None:
+            return jsonify({"error": "No data available for the given query"})
+        df['Title'] = df['Title'].str.extract(r'<a [^>]*>(.*?)</a>', expand=False)
+        visualizations = await generate_visualizations(df)
+        return jsonify(visualizations)
+
+    except Exception as e:
+        return jsonify({"error": f"Error generating visualizations: {e}"})
+
+async def generate_visualizations(df):
+    total_plot = await viz_combined(df, plot_type='total')
+    engagement_rate_plot = await viz_combined(df, plot_type='engagement_rate')
+    composite_score_plot = await viz_combined(df, plot_type='composite_score')
+
+    return {
+        "total_plot": total_plot,
+        "engagement_rate_plot": engagement_rate_plot,
+        "composite_score_plot": composite_score_plot
+    }
+
+@app.route("/sentiment_analysis")
+async def sentiment_analysis():
+    try:
+        df, max_comments, order_by = pickle.loads(session['df'])
+        if df.empty or df is None or 'Video_link' not in df:
+            return jsonify({"error": "Invalid or missing DataFrame in session."})
+        video_ids = df['Video_link'].str.extract(r'v=([a-zA-Z0-9_-]+)', expand=False)
+
+        sentiment_results = []
+
+        for video_id in video_ids:
+            result = await analyze_comments(video_id, max_comments, order_by)
+            print(result)
+            sentiment_results.append(result)
+        df_senti = pd.DataFrame(sentiment_results)
+        return jsonify({'senti_plot' : sentiment_viz(df_senti)})
+    except Exception as e:
+        return jsonify({"error in fetching comments sentiment": f"{e}"})
 if __name__ == '__main__':
     app.run(debug=True)
