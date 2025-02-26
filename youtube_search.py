@@ -8,17 +8,16 @@ import seaborn as sns
 import isodate
 import base64
 import io
+import os
 
 matplotlib.use('Agg')
 sns.set()
 
-# API_KEY_COMMENTS = 'YOUR_YOUTUBE_API_KEY'
-API_KEY_COMMENTS = 'AIzaSyBsJXU_JAPuulqPJPy8XrEk39E1Fy2XaWc'
-# API_KEY_VIDEO = 'YOUR_YOUTUBE_API_KEY'
-API_KEY_VIDEO = 'AIzaSyDtqLe7rRVVuYq3HsjbLOov-3mf_ZI2Mlg'
+API_KEY_COMMENTS = os.getenv('YOUTUBE_COM_API_KEY')
+API_KEY_VIDEO = os.getenv('YOUTUBE_VID_API_KEY')
 BASE_URL = "https://www.googleapis.com/youtube/v3"
 
-API_URL = "https://amaanp314-youtube-sentiment.hf.space/sentiment"
+API_URL = os.getenv('MODEL_API_URL')
 
 async def get_sentiments(comments):
     async with aiohttp.ClientSession() as session:
