@@ -10,7 +10,7 @@
     />
     <link
       rel="stylesheet"
-      href="{{ url_for('static', filename='styles.css') }}"
+      href="{{ url_for('static', filename='css/styles.css') }}"
     />
   </head>
   <body>
@@ -52,21 +52,21 @@
         </div>
         <h2 class="mt-4">Sentiment Analysis Options</h2>
         <div class="form-group">
-          <label for="num_comments">Number of Comments</label>
+          <label for="max_comments">Number of Comments</label>
           <input
             type="number"
             class="form-control"
-            id="num_comments"
-            name="num_comments"
+            id="max_comments"
+            name="max_comments"
             min="5"
-            max="1000"
+            max="100"
             value="5"
             required
           />
         </div>
         <div class="form-group">
-          <label for="comment_order">Comment Order</label>
-          <select class="form-control" id="comment_order" name="comment_order">
+          <label for="order_by">Comment Order</label>
+          <select class="form-control" id="order_by" name="order_by">
             <option value="relevance">Relevance</option>
             <option value="time">Time</option>
           </select>

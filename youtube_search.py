@@ -1,10 +1,7 @@
 import aiohttp
 import matplotlib
 import pandas as pd
-from tqdm import tqdm
-import tensorflow as tf
 from matplotlib.ticker import PercentFormatter, FuncFormatter
-from transformers import RobertaTokenizer, TFRobertaForSequenceClassification
 import matplotlib.pyplot as plt
 from collections import Counter
 import seaborn as sns   
@@ -15,51 +12,47 @@ import io
 matplotlib.use('Agg')
 sns.set()
 
-API_KEY_COMMENTS = 'YOUR_YOUTUBE_API_KEY'
-API_KEY_VIDEO = 'YOUR_YOUTUBE_API_KEY'
+# API_KEY_COMMENTS = 'YOUR_YOUTUBE_API_KEY'
+API_KEY_COMMENTS = 'AIzaSyBsJXU_JAPuulqPJPy8XrEk39E1Fy2XaWc'
+# API_KEY_VIDEO = 'YOUR_YOUTUBE_API_KEY'
+API_KEY_VIDEO = 'AIzaSyDtqLe7rRVVuYq3HsjbLOov-3mf_ZI2Mlg'
 BASE_URL = "https://www.googleapis.com/youtube/v3"
 
-model_name = "AmaanP314/youtube-comment-sentiment"
-model = TFRobertaForSequenceClassification.from_pretrained(model_name)
-tokenizer = RobertaTokenizer.from_pretrained(model_name)
+API_URL = "https://amaanp314-youtube-sentiment.hf.space/sentiment"
 
-label_map = {0: "Negative", 1: "Neutral", 2: "Positive"}
-def batch_sentiment_analysis(texts, batch_size=16):
-    inputs = tokenizer(texts, return_tensors="tf", padding=True, truncation=True, max_length=512, truncation_strategy="longest_first")
-    logits = model(**inputs).logits
-    predictions = tf.argmax(logits, axis=1).numpy()
+async def get_sentiments(comments):
+    async with aiohttp.ClientSession() as session:
+        try:
+            payload = {"comments": comments}
+            async with session.post(API_URL, json=payload) as response:
+                if response.status == 200:
+                    data = await response.json()
+                    return data.get("sentiments", [])
+                else:
+                    print(f"Error: Received {response.status} from API")
+                    return ["Unknown"] * len(comments)
+        except Exception as e:
+            print(f"Error in get_sentiment_async: {e}")
+            return ["Unknown"] * len(comments)
 
-    return [label_map[pred] for pred in predictions]
 
-def analyze_comments_sentiment(comments):
-    results = []
-    for i in tqdm(range(0, len(comments), 32)):  
-        batch_comments = comments[i:i+32]
-        batch_results = batch_sentiment_analysis(batch_comments)
-        results.extend(batch_results)
-    return results
+async def analyze_comments(comments):
+    sentiment_labels = await get_sentiments(comments)
+    sentiment_counts = Counter(sentiment_labels)
+    result = {
+        'Positive': sentiment_counts.get('Positive', 0),
+        'Negative': sentiment_counts.get('Negative', 0),
+        'Neutral': sentiment_counts.get('Neutral', 0)
+    }
+    return result
 
-async def fetch_comments_data(video_id, max_results, order='relevance'):
+async def fetch_comments_data(video_id, max_results, order):
     url = f"{BASE_URL}/commentThreads?part=snippet&videoId={video_id}&key={API_KEY_COMMENTS}&maxResults={max_results}&order={order}"
     async with aiohttp.ClientSession() as session:
         async with session.get(url) as response:
             if response.status == 200:
                 return await response.json()
             return None
-
-async def analyze_comments(video_id, max_comments, order):
-    data = await fetch_comments_data(video_id, max_comments, order)
-    if data:
-        texts = [item["snippet"]["topLevelComment"]["snippet"]["textDisplay"] for item in data["items"]]
-        sentiment_labels = analyze_comments_sentiment(texts)
-        sentiment_counts = Counter(sentiment_labels)
-        result = {
-            'Positive': sentiment_counts.get('Positive', 0),
-            'Negative': sentiment_counts.get('Negative', 0),
-            'Neutral': sentiment_counts.get('Neutral', 0)
-        }
-        return result
-    return None
 
 async def fetch_video_data(search_query, max_results, sort_by='relevance'):
     url = f"{BASE_URL}/search?part=snippet&type=video&q={search_query}&key={API_KEY_VIDEO}&maxResults={max_results}&order={sort_by}"
@@ -101,16 +94,21 @@ async def fetch_video_details(video_id):
                         return video_details
             return None
 
-async def get_data(search_query, max_videos, sort_by):
+async def get_data(search_query, max_videos, sort_by, max_com, ord):
     video_data = await fetch_video_data(search_query=search_query, max_results=max_videos, sort_by=sort_by)
-    detailed_video_data = []
+    detailed_video_data, comments_data = [], []
     if video_data:
         for video in video_data["items"]:
             video_id = video["id"]["videoId"]
             video_details = await fetch_video_details(video_id=video_id)
+            if video_details:
+                com_data = await fetch_comments_data(video_id=video_id, max_results=max_com, order=ord)
+                comments = [item["snippet"]["topLevelComment"]["snippet"]["textDisplay"] for item in com_data["items"]] if com_data else None
             detailed_video_data.append(video_details)
-        return detailed_video_data
-    return None
+            comments_data.append(comments)
+        print(comments_data)
+        return detailed_video_data, comments_data
+    return None, None
 
 async def viz_combined(df, plot_type='total'):
     if len(df) <= 20:
@@ -206,10 +204,12 @@ def sentiment_viz(df):
     return base64.b64encode(img.getvalue()).decode('utf8')
 
 # Main function to search for videos and process data
-async def search_youtube(query, sort_by='relevance', max_results=10):
-    videos_data = await get_data(search_query=query, 
-                                max_videos=max_results, 
-                                sort_by=sort_by)
+async def search_youtube(query, sort_by='relevance', max_results=10, max_com=10, order='relevance'):
+    videos_data, comments_data = await get_data(search_query=query, 
+                                                max_videos=max_results, 
+                                                sort_by=sort_by,
+                                                max_com=max_com,
+                                                ord=order)
     if not videos_data:
         return None
     structured_data = []
@@ -247,7 +247,7 @@ async def search_youtube(query, sort_by='relevance', max_results=10):
         df['Likes(%)'] = (df['Likes']) / (df['Views']) * 100
         df = df[['Title', 'Channel', 'Subscribers', 'Views', 'Likes', 'Likes(%)', 'Duration(minutes)', 'Upload_date', 'Comments', 'Video_link']]
         df['Title'] = df.apply(lambda row: f'<a href="{row["Video_link"]}" target="_blank">{row["Title"]}</a>', axis=1)
-        return df
+        return df, comments_data
     except Exception as e:
         print(f"An error occurred while processing the data: {e}")
         return None

@@ -1,7 +1,8 @@
-from quart import Quart, request, render_template, redirect, url_for, jsonify, session
+from quart import Quart, request, render_template, redirect, url_for, jsonify
 from youtube_search import search_youtube, viz_combined, analyze_comments, sentiment_viz
 import pandas as pd
-import pickle
+import asyncio
+import shelve
 
 app = Quart(__name__)
 app.secret_key = 'YOUR_SECRET_KEY'
@@ -16,8 +17,8 @@ async def search():
         form_data = await request.form
         query = form_data.get('query', '').strip()
         sort_by = form_data.get('sort_by', 'relevance')
-        max_results = int(form_data.get('max_results', 10))
-        max_comments = int(form_data.get('max_comments', 5))  
+        max_results = int(form_data.get('max_results', 5))
+        max_comments = int(form_data.get('max_comments', 10))  
         order_by = form_data.get('order_by', 'relevance')
         if not query:
             return await render_template('index.html', error="Search query cannot be empty.")
@@ -31,21 +32,21 @@ async def results():
     try:
         query = request.args.get('query', '').strip()
         sort_by = request.args.get('sort_by', 'relevance')
-        max_results = int(request.args.get('max_results', 10))
+        max_results = int(request.args.get('max_results', 5))
         max_comments = int(request.args.get('max_comments', 10))  
         order_by = request.args.get('order_by', 'relevance')
 
         if not query:
             return await render_template('index.html', error="Search query cannot be empty.")
 
-        data = await search_youtube(query, sort_by=sort_by, max_results=max_results)
+        data, comments = await search_youtube(query, sort_by=sort_by, max_results=max_results, max_com=max_comments, order=order_by)
         df = data
-        session['df'] = pickle.dumps((df, max_comments, order_by))
+        df = df.drop(columns=['Video_link'])
+        with shelve.open('data_shelve') as db:
+            db['query_data'] = {'df': df, 'comments': comments}
 
         if df is None or df.empty:
             return await render_template('results.html', query=query, error="No data found for the query.")
-
-        df = df.drop(columns=['Video_link'])
 
         df.index = df.index + 1
         df_html = df.to_html(classes='table table-striped', index=True, escape=False)
@@ -69,7 +70,9 @@ async def results():
 @app.route('/fetch_visualizations')
 async def fetch_visualizations():
     try:
-        df, _, _ = pickle.loads(session['df'])
+        with shelve.open('data_shelve') as db:
+            data = db.get('query_data')
+            df = data['df']
         if df is None:
             return jsonify({"error": "No data available for the given query"})
         df['Title'] = df['Title'].str.extract(r'<a [^>]*>(.*?)</a>', expand=False)
@@ -93,20 +96,20 @@ async def generate_visualizations(df):
 @app.route("/sentiment_analysis")
 async def sentiment_analysis():
     try:
-        df, max_comments, order_by = pickle.loads(session['df'])
-        if df.empty or df is None or 'Video_link' not in df:
+        with shelve.open('data_shelve') as db:
+            data = db.get('query_data')
+            df = data['df']
+            comments = data['comments']
+
+        if df.empty or df is None:
             return jsonify({"error": "Invalid or missing DataFrame in session."})
-        video_ids = df['Video_link'].str.extract(r'v=([a-zA-Z0-9_-]+)', expand=False)
-
-        sentiment_results = []
-
-        for video_id in video_ids:
-            result = await analyze_comments(video_id, max_comments, order_by)
-            print(result)
-            sentiment_results.append(result)
+        tasks = [analyze_comments(comment) for comment in comments]
+        sentiment_results = await asyncio.gather(*tasks)
         df_senti = pd.DataFrame(sentiment_results)
-        return jsonify({'senti_plot' : sentiment_viz(df_senti)})
+        print(df_senti)
+        return jsonify({'senti_plot': sentiment_viz(df_senti)})
     except Exception as e:
         return jsonify({"error in fetching comments sentiment": f"{e}"})
+
 if __name__ == '__main__':
     app.run(debug=True)
