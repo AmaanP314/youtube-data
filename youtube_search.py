@@ -102,10 +102,9 @@ async def get_data(search_query, max_videos, sort_by, max_com, ord):
             video_details = await fetch_video_details(video_id=video_id)
             if video_details:
                 com_data = await fetch_comments_data(video_id=video_id, max_results=max_com, order=ord)
-                comments = [item["snippet"]["topLevelComment"]["snippet"]["textDisplay"] for item in com_data["items"]] if com_data else None
+                comments = [item["snippet"]["topLevelComment"]["snippet"]["textOriginal"] for item in com_data["items"]] if com_data else None
             detailed_video_data.append(video_details)
             comments_data.append(comments)
-        print(comments_data)
         return detailed_video_data, comments_data
     return None, None
 

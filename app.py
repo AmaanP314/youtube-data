@@ -106,7 +106,6 @@ async def sentiment_analysis():
         tasks = [analyze_comments(comment) for comment in comments]
         sentiment_results = await asyncio.gather(*tasks)
         df_senti = pd.DataFrame(sentiment_results)
-        print(df_senti)
         return jsonify({'senti_plot': sentiment_viz(df_senti)})
     except Exception as e:
         return jsonify({"error in fetching comments sentiment": f"{e}"})
