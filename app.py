@@ -38,8 +38,11 @@ async def results():
 
         if not query:
             return await render_template('index.html', error="Search query cannot be empty.")
-
-        data, comments = await search_youtube(query, sort_by=sort_by, max_results=max_results, max_com=max_comments, order=order_by)
+        
+        results = await search_youtube(query, sort_by=sort_by, max_results=max_results, max_com=max_comments, order=order_by)
+        if results is None:
+            return await render_template('results.html', error="No data found for the query.")
+        data, comments = results
         df = data
         df = df.drop(columns=['Video_link'])
         with shelve.open('data_shelve') as db:
@@ -106,7 +109,7 @@ async def sentiment_analysis():
         tasks = [analyze_comments(comment) for comment in comments]
         sentiment_results = await asyncio.gather(*tasks)
         df_senti = pd.DataFrame(sentiment_results)
-        return jsonify({'senti_plot': sentiment_viz(df_senti)})
+        return jsonify({'senti_plot':await sentiment_viz(df_senti)})
     except Exception as e:
         return jsonify({"error in fetching comments sentiment": f"{e}"})
 

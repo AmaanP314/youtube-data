@@ -16,7 +16,6 @@ sns.set()
 API_KEY_COMMENTS = os.getenv('YOUTUBE_COM_API_KEY')
 API_KEY_VIDEO = os.getenv('YOUTUBE_VID_API_KEY')
 BASE_URL = "https://www.googleapis.com/youtube/v3"
-
 API_URL = os.getenv('MODEL_API_URL')
 
 async def get_sentiments(comments):
@@ -29,10 +28,10 @@ async def get_sentiments(comments):
                     return data.get("sentiments", [])
                 else:
                     print(f"Error: Received {response.status} from API")
-                    return ["Unknown"] * len(comments)
+                    return []
         except Exception as e:
             print(f"Error in get_sentiment_async: {e}")
-            return ["Unknown"] * len(comments)
+            return []
 
 
 async def analyze_comments(comments):
@@ -87,10 +86,7 @@ async def fetch_video_details(video_id):
                 result = await response.json()
                 if result["items"]:
                     video_details = result["items"][0]
-                    duration = video_details["contentDetails"]["duration"]
-                    duration_seconds = isodate.parse_duration(duration).total_seconds()
-                    if duration_seconds > 60:
-                        return video_details
+                    return video_details
             return None
 
 async def get_data(search_query, max_videos, sort_by, max_com, ord):
@@ -187,7 +183,7 @@ async def viz_combined(df, plot_type='total'):
     img.seek(0)
     return base64.b64encode(img.getvalue()).decode('utf8')
 
-def sentiment_viz(df):
+async def sentiment_viz(df):
     ax = df.plot(kind='bar', stacked=True, figsize=(12, 6), color=['#28a745', '#dc3545', '#bfbfbf'])
     plt.title('Sentiment Analysis for Multiple Videos')
     plt.xlabel('Video Index')
@@ -201,7 +197,6 @@ def sentiment_viz(df):
     img.seek(0)
     return base64.b64encode(img.getvalue()).decode('utf8')
 
-# Main function to search for videos and process data
 async def search_youtube(query, sort_by='relevance', max_results=10, max_com=10, order='relevance'):
     videos_data, comments_data = await get_data(search_query=query, 
                                                 max_videos=max_results, 
@@ -222,13 +217,20 @@ async def search_youtube(query, sort_by='relevance', max_results=10, max_com=10,
                 channel_details = await fetch_channel_details(snippet["channelId"])
                 video_link = f"https://www.youtube.com/watch?v={video_id}"
 
+                duration_str = content_details.get('duration', 'PT0S')
+                duration = isodate.parse_duration(duration_str)
+                total_seconds = int(duration.total_seconds())
+                hours = total_seconds // 3600
+                minutes = (total_seconds % 3600) // 60
+                seconds = total_seconds % 60
+                formatted_duration = f"{hours:02}:{minutes:02}:{seconds:02}"
                 video_info = {
                     "Title": snippet["title"],
                     "Views": int(statistics.get("viewCount", 0)),
                     "Likes": int(statistics.get("likeCount", 0)),
                     "Comments": int(statistics.get("commentCount", 0)),
                     "Upload_date": snippet.get("publishedAt", "N/A"),
-                    "Duration(minutes)": int(isodate.parse_duration(content_details['duration']).total_seconds()) // 60,
+                    "Duration": formatted_duration,
                     "Channel": channel_title,
                     "Subscribers": int(channel_details.get("subscriberCount", 0)),
                     'Video_link': video_link
@@ -243,7 +245,7 @@ async def search_youtube(query, sort_by='relevance', max_results=10, max_com=10,
     try:
         df['Upload_date'] = pd.to_datetime(df['Upload_date'].str.split('T').str[0])
         df['Likes(%)'] = (df['Likes']) / (df['Views']) * 100
-        df = df[['Title', 'Channel', 'Subscribers', 'Views', 'Likes', 'Likes(%)', 'Duration(minutes)', 'Upload_date', 'Comments', 'Video_link']]
+        df = df[['Title', 'Channel', 'Subscribers', 'Views', 'Likes', 'Likes(%)', 'Duration', 'Upload_date', 'Comments', 'Video_link']]
         df['Title'] = df.apply(lambda row: f'<a href="{row["Video_link"]}" target="_blank">{row["Title"]}</a>', axis=1)
         return df, comments_data
     except Exception as e:
