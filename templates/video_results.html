@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>{{ title }}</title>
+    <link
+      rel="stylesheet"
+      href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css"
+    />
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='css/styles.css') }}"
+    />
+    <style>
+      .container {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+      }
+      .section {
+        width: 100%;
+        margin-top: 30px;
+      }
+      .section h3 {
+        text-align: center;
+      }
+      .spinner-border {
+        display: inline-block;
+        width: 3rem;
+        height: 3rem;
+        vertical-align: text-bottom;
+        border: 0.25em solid currentColor;
+        border-right-color: transparent;
+        border-radius: 50%;
+        -webkit-animation: spinner-border 0.75s linear infinite;
+        animation: spinner-border 0.75s linear infinite;
+      }
+      @-webkit-keyframes spinner-border {
+        100% {
+          -webkit-transform: rotate(360deg);
+        }
+      }
+      @keyframes spinner-border {
+        100% {
+          transform: rotate(360deg);
+        }
+      }
+      .spinner-container {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        min-height: 150px;
+        margin-top: 20px;
+      }
+      img {
+        max-width: 100%;
+        height: auto;
+        border: 1px solid #ddd;
+        padding: 5px;
+        background-color: #fff;
+        margin: 10px 0;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container mt-5">
+      <h1 class="mb-3 text-center">Analysis for Video: {{ title }}</h1>
+      <p class="text-center"><strong>Video ID:</strong> {{ video_id }}</p>
+
+      <div class="section">
+        <h3>Video Details</h3>
+        <div class="table-responsive">{{ table | safe }}</div>
+      </div>
+
+      <div class="section">
+        <h3>Comments Word Cloud</h3>
+        {% if com_word_cloud %}
+        <div class="d-flex justify-content-center">
+          <img
+            src="data:image/png;base64,{{ com_word_cloud }}"
+            alt="Word Cloud"
+            class="img-fluid"
+          />
+        </div>
+        {% else %}
+        <p class="text-center">No word cloud available.</p>
+        {% endif %}
+      </div>
+
+      <div class="section">
+        <h3>Sentiment Analysis (Relevant Comments)</h3>
+        <p>Comments Extracted: {{ com_rel }}</p>
+        {% if error %}
+        <p class="text-center">{{ error }}</p>
+        {% else %}
+        <div id="senti_rel_container" class="spinner-container">
+          <div class="spinner-border text-primary" role="status">
+            <span class="sr-only">Loading...</span>
+          </div>
+        </div>
+        {% endif %}
+      </div>
+
+      <div class="section">
+        <h3>Sentiment Analysis (Time Comments)</h3>
+        <p>Comments Extracted: {{ com_time }}</p>
+        {% if error %}
+        <p class="text-center">{{ error }}</p>
+        {% else %}
+        <div id="senti_time_container" class="spinner-container">
+          <div class="spinner-border text-primary" role="status">
+            <span class="sr-only">Loading...</span>
+          </div>
+        </div>
+        {% endif %}
+      </div>
+
+      <div class="section text-center">
+        <a href="{{ url_for('index') }}" class="btn btn-primary"
+          >Back to Home</a
+        >
+      </div>
+    </div>
+
+    <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
+    <script>
+      $(document).ready(function () {
+        $.ajax({
+          url: "/senti_rel",
+          method: "GET",
+          success: function (data) {
+            if (data.senti_rel) {
+              $("#senti_rel_container").html(
+                '<img src="data:image/png;base64,' +
+                  data.senti_rel +
+                  '" class="img-fluid" alt="Sentiment Analysis (Relevant)"/>'
+              );
+            } else {
+              $("#senti_rel_container").html(
+                '<p class="text-center">Error fetching sentiment analysis.</p>'
+              );
+            }
+          },
+          error: function () {
+            $("#senti_rel_container").html(
+              '<p class="text-center">Error fetching sentiment analysis.</p>'
+            );
+          },
+        });
+        $.ajax({
+          url: "/senti_time",
+          method: "GET",
+          success: function (data) {
+            if (data.senti_time) {
+              $("#senti_time_container").html(
+                '<img src="data:image/png;base64,' +
+                  data.senti_time +
+                  '" class="img-fluid" alt="Sentiment Analysis (Time)"/>'
+              );
+            } else {
+              $("#senti_time_container").html(
+                '<p class="text-center">Error fetching sentiment analysis.</p>'
+              );
+            }
+          },
+          error: function () {
+            $("#senti_time_container").html(
+              '<p class="text-center">Error fetching sentiment analysis.</p>'
+            );
+          },
+        });
+      });
+    </script>
+  </body>
+</html>

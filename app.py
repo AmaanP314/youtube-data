@@ -1,8 +1,10 @@
-from quart import Quart, request, render_template, redirect, url_for, jsonify
+from quart import Quart, request, render_template, redirect, url_for, jsonify, request
 from youtube_search import search_youtube, viz_combined, analyze_comments, sentiment_viz
 import pandas as pd
 import asyncio
 import shelve
+from urllib.parse import urlparse, parse_qs
+from video_search import process_video, generate_wordcloud
 
 app = Quart(__name__)
 app.secret_key = 'YOUR_SECRET_KEY'
@@ -112,6 +114,94 @@ async def sentiment_analysis():
         return jsonify({'senti_plot':await sentiment_viz(df_senti)})
     except Exception as e:
         return jsonify({"error in fetching comments sentiment": f"{e}"})
+
+@app.route('/<path:video_url>', methods=['GET'])
+async def video_redirect(video_url):
+    query_str = request.query_string.decode('utf-8')
+    
+    if not video_url.startswith("http"):
+        full_url = "https://" + video_url
+    else:
+        full_url = video_url
+    
+    if query_str:
+        full_url = f"{full_url}?{query_str}"
+    print(query_str)
+    parsed = urlparse(full_url)
+    print(parsed)
+    
+    if parsed.netloc == "www.youtube.com" and parsed.path == "/watch":
+        video_id = parse_qs(parsed.query).get('v', [None])[0]
+        print(video_id)
+        if not video_id:
+            return "Invalid YouTube URL: missing video id", 400
+        
+        results = await process_video(video_id)
+        if results is None:
+            return await render_template('video_results.html', video_id=video_id, title=None, error="No data found for the videoId.")
+        data, com_rel, com_time = results
+        if com_rel is None:
+            all_com = com_time if com_time is not None else []
+        elif com_time is None:
+            all_com = com_rel
+        else:
+            all_com = com_rel + com_time
+        word_cloud = await generate_wordcloud(all_com) if all_com else None
+        df = data
+        df = df.drop(columns=['Video_link'])
+        with shelve.open('data_shelve') as db:
+            db['vid_data'] = {'df_vid': df, 'com_rel': com_rel, 'com_time': com_time}
+        title = df['Title'].str.extract(r'<a [^>]*>(.*?)</a>', expand=False).values[0]
+        df.index = df.index + 1
+        df_html = df.to_html(classes='table table-striped', index=True, escape=False)
+        return await render_template(
+            'video_results.html',
+            video_id=video_id,
+            title=title,
+            table=df_html,
+            com_word_cloud=word_cloud,
+            com_rel=len(com_rel) if com_time else 0,
+            com_time=len(com_time) if com_time else 0,
+            senti_rel=None,
+            senti_time=None
+        )
+    else:
+        return "Not Found", 404
+
+@app.route("/senti_rel")
+async def sentiment_relevant():
+    try:
+        with shelve.open('data_shelve') as db:
+            data = db.get('vid_data')
+            df = data['df_vid']
+            comments = data['com_rel']
+        if not comments:
+            return jsonify({"error": "No relevant comments found for the video."})
+        if df.empty or df is None:
+            return jsonify({"error": "Invalid or missing DataFrame in session."})
+        sentiment_results = await analyze_comments(comments)
+        df_senti = pd.DataFrame([sentiment_results])
+        return jsonify({'senti_rel':await sentiment_viz(df_senti, type='single')})
+    except Exception as e:
+        return jsonify({"error in fetching comments sentiment": f"{e}"})
+    
+@app.route("/senti_time")
+async def sentiment_time():
+    try:
+        with shelve.open('data_shelve') as db:
+            data = db.get('vid_data')
+            df = data['df_vid']
+            comments = data['com_time']
+        if not comments:
+            return jsonify({"error": "No relevant comments found for the video."})
+        if df.empty or df is None:
+            return jsonify({"error": "Invalid or missing DataFrame in session."})
+        sentiment_results = await analyze_comments(comments)
+        df_senti = pd.DataFrame([sentiment_results])
+        return jsonify({'senti_time':await sentiment_viz(df_senti, type='single')})
+    except Exception as e:
+        return jsonify({"error in fetching comments sentiment": f"{e}"})
+
 
 if __name__ == '__main__':
     app.run(debug=True)

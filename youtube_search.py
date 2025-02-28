@@ -183,13 +183,22 @@ async def viz_combined(df, plot_type='total'):
     img.seek(0)
     return base64.b64encode(img.getvalue()).decode('utf8')
 
-async def sentiment_viz(df):
-    ax = df.plot(kind='bar', stacked=True, figsize=(12, 6), color=['#28a745', '#dc3545', '#bfbfbf'])
-    plt.title('Sentiment Analysis for Multiple Videos')
-    plt.xlabel('Video Index')
-    plt.ylabel('Number of Comments')
-    plt.xticks(ticks=range(len(df)), labels=[i + 1 for i in range(len(df))], rotation=0)
-    plt.legend(['Positive', 'Negative', 'Neutral'])
+async def sentiment_viz(df, type='multiple'):
+    if type == 'multiple':
+        # Stacked bar chart for multiple videos
+        ax = df.plot(kind='bar', stacked=True, figsize=(12, 6), color=['#28a745', '#dc3545', '#bfbfbf'])
+        plt.title('Sentiment Analysis for Multiple Videos')
+        plt.xlabel('Video Index')
+        plt.ylabel('Number of Comments')
+        plt.xticks(ticks=range(len(df)), labels=[i + 1 for i in range(len(df))], rotation=0)
+        plt.legend(['Positive', 'Negative', 'Neutral'])
+    elif type == 'single':
+        # Non-stacked bar chart for a single video (different bars for each sentiment)
+        series = df.iloc[0] 
+        ax = series.plot(kind='bar', figsize=(12, 6), color=['#28a745', '#dc3545', '#bfbfbf'])
+        plt.title('Sentiment Analysis for a Single Video')
+        plt.ylabel('Number of Comments')
+        plt.xticks(rotation=0)
     plt.tight_layout()
     img = io.BytesIO()
     plt.savefig(img, format='png')
@@ -216,7 +225,7 @@ async def search_youtube(query, sort_by='relevance', max_results=10, max_com=10,
                 channel_title = snippet["channelTitle"]
                 channel_details = await fetch_channel_details(snippet["channelId"])
                 video_link = f"https://www.youtube.com/watch?v={video_id}"
-
+                
                 duration_str = content_details.get('duration', 'PT0S')
                 duration = isodate.parse_duration(duration_str)
                 total_seconds = int(duration.total_seconds())
